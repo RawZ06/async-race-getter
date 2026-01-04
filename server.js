@@ -118,7 +118,7 @@ fastify.get('/api/race/*', async (request, reply) => {
 
     if (!response.ok) {
       return reply.status(response.status).send({
-        error: `Erreur lors de la récupération des données: ${response.statusText}`
+        error: `Error fetching data: ${response.statusText}`
       });
     }
 
@@ -127,7 +127,7 @@ fastify.get('/api/race/*', async (request, reply) => {
     // Vérifier que info_bot existe
     if (!data.info_bot) {
       return reply.status(400).send({
-        error: 'Aucune information info_bot trouvée dans les données'
+        error: 'This race was not managed by the bot and data cannot be retrieved'
       });
     }
 
@@ -137,7 +137,7 @@ fastify.get('/api/race/*', async (request, reply) => {
   } catch (error) {
     fastify.log.error('Error fetching race data:', error);
     return reply.status(500).send({
-      error: 'Erreur lors de la récupération des données',
+      error: 'Error fetching data',
       details: error.message
     });
   }
