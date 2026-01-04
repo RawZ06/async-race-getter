@@ -127,7 +127,7 @@ fastify.get('/api/race/*', async (request, reply) => {
     // Vérifier que info_bot existe
     if (!data.info_bot) {
       return reply.status(400).send({
-        error: 'This race was not managed by the bot and data cannot be retrieved'
+        error: 'This race was not managed by Mido\'s bot and data cannot be retrieved'
       });
     }
 
