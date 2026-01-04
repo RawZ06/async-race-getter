@@ -2,17 +2,17 @@
   "name": "async-race-getter",
   "version": "1.0.0",
   "description": "Récupérateur de seeds Async Race depuis racetime.gg",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node --watch server.js"
   },
   "keywords": ["racetime", "seed", "async-race"],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.18.2",
-    "cors": "^2.8.5",
-    "node-fetch": "^2.7.0"
+    "@fastify/static": "^8.0.2",
+    "fastify": "^5.2.0"
   }
 }

@@ -1,22 +1,30 @@
 # 🏁 Async Race Seed Getter
 
-Une application web pour récupérer facilement les informations de seed et mot de passe depuis racetime.gg.
+Une application web moderne pour récupérer facilement les informations de seed et mot de passe depuis racetime.gg.
 
 ## 🚀 Démarrage rapide
 
 ### Installation
 
 ```bash
-npm install
+pnpm install
 ```
 
 ### Lancement
 
 ```bash
-npm start
+pnpm start
 ```
 
 L'application sera accessible sur [http://localhost:3000](http://localhost:3000)
+
+### Mode développement
+
+```bash
+pnpm dev
+```
+
+Le serveur redémarrera automatiquement à chaque modification.
 
 ## 📖 Utilisation
 
@@ -25,45 +33,54 @@ L'application sera accessible sur [http://localhost:3000](http://localhost:3000)
 
 2. Collez le lien dans le champ de texte
 
-3. Cliquez sur "Récupérer"
+3. Cliquez sur "Récupérer" ou appuyez sur Entrée
 
 4. Les informations seront affichées :
-   - **Seed** : Lien vers la seed avec les images du hash
-   - **Mot de passe** : Images du mot de passe avec le texte
+   - **Seed** : Lien vers la seed avec bouton de copie
+   - **Hash** : Images du hash (sans préfixe "Hash")
+   - **Mot de passe** : Images du mot de passe
 
-5. Utilisez les boutons "Copier" pour copier rapidement le lien ou le mot de passe
+5. Cliquez sur "Copier" pour copier rapidement le lien de la seed
 
 ## 🛠️ Fonctionnalités
 
-- ✅ Récupération automatique des données via proxy backend (évite les problèmes CORS)
-- ✅ Interface moderne avec Tailwind CSS
-- ✅ Affichage des images du hash (sans préfixe "Hash")
-- ✅ Affichage des images du mot de passe (avec préfixe complet)
-- ✅ Boutons de copie rapide
+- ✅ Backend moderne avec Fastify et ES6 modules
+- ✅ Frontend réactif avec Alpine.js
+- ✅ Interface élégante avec Tailwind CSS
+- ✅ Proxy backend pour éviter les problèmes CORS
+- ✅ Conversion automatique des noms (snake_case pour les hash)
+- ✅ Bouton de copie rapide pour la seed
 - ✅ Gestion des erreurs
 - ✅ Design responsive
+- ✅ Hot reload en mode développement
 
 ## 📁 Structure du projet
 
 ```
 async-race-getter/
-├── server.js          # Serveur Express avec proxy
-├── package.json       # Dépendances npm
+├── server.js          # Serveur Fastify avec ES6 modules
+├── package.json       # Dépendances et configuration
 ├── public/
-│   ├── index.html    # Interface utilisateur
-│   └── app.js        # Logique frontend
+│   └── index.html    # Interface Alpine.js + Tailwind
 └── README.md         # Ce fichier
 ```
 
-## 🔧 Technologies utilisées
+## 🔧 Stack technique
 
-- **Backend** : Node.js, Express, node-fetch
-- **Frontend** : HTML, JavaScript, Tailwind CSS
-- **Proxy** : Pour éviter les problèmes CORS avec racetime.gg
+- **Backend** :
+  - Fastify (serveur web rapide)
+  - ES6 Modules (import/export natif)
+  - Native fetch API (Node.js moderne)
 
-## 📝 Notes
+- **Frontend** :
+  - Alpine.js (framework réactif léger)
+  - Tailwind CSS (styling)
+  - Vanilla JavaScript
 
-- Le format attendu pour `info_bot` est : `"Hash: [images] | Password: [images]"`
-- Les images du hash n'incluent PAS le préfixe "Hash" (ex: `Frog.png`)
-- Les images du mot de passe incluent le préfixe complet (ex: `NoteCright.png`)
+## 📝 Notes techniques
+
+- Le format attendu pour `info_bot` est : `"HashXXX HashYYY | NoteAAA NoteBBB\nhttps://..."`
+- Les images du hash n'incluent PAS le préfixe "Hash" et sont converties en snake_case (ex: `SkullToken` → `Skull_Token.png`)
+- Les images du mot de passe gardent leur préfixe complet (ex: `NoteCright.png`)
 - Les images sont chargées depuis `https://racetime.gg/media/`
+- Utilise `pnpm` pour la gestion des dépendances (plus rapide que npm)
