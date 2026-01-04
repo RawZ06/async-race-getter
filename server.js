@@ -16,9 +16,52 @@ await fastify.register(fastifyStatic, {
   prefix: '/'
 });
 
-// Fonction pour convertir CamelCase en snake_case
-function toSnakeCase(str) {
-  return str.replace(/([a-z])([A-Z])/g, '$1_$2');
+// Mapping inversé : de HashXXX vers le nom de fichier
+const hashMap = {
+  'HashBeans': 'Beans',
+  'HashBigMagic': 'Big Magic',
+  'HashBombchu': 'Bombchu',
+  'HashBoomerang': 'Boomerang',
+  'HashBossKey': 'Boss Key',
+  'HashBottledFish': 'Bottled Fish',
+  'HashBottledMilk': 'Bottled Milk',
+  'HashBow': 'Bow',
+  'HashCompass': 'Compass',
+  'HashCucco': 'Cucco',
+  'HashDekuNut': 'Deku Nut',
+  'HashDekuStick': 'Deku Stick',
+  'HashFairyOcarina': 'Fairy Ocarina',
+  'HashFrog': 'Frog',
+  'HashGoldScale': 'Gold Scale',
+  'HashHeart': 'Heart Container',
+  'HashHoverBoots': 'Hover Boots',
+  'HashKokiriTunic': 'Kokiri Tunic',
+  'HashLensOfTruth': 'Lens of Truth',
+  'HashLongshot': 'Longshot',
+  'HashMap': 'Map',
+  'HashMaskOfTruth': 'Mask of Truth',
+  'HashMasterSword': 'Master Sword',
+  'HashHammer': 'Megaton Hammer',
+  'HashMirrorShield': 'Mirror Shield',
+  'HashMushroom': 'Mushroom',
+  'HashSaw': 'Saw',
+  'HashSilvers': 'Silver Gauntlets',
+  'HashSkullToken': 'Skull Token',
+  'HashSlingshot': 'Slingshot',
+  'HashSoldOut': 'SOLD OUT',
+  'HashStoneOfAgony': 'Stone of Agony',
+};
+
+// Fonction pour convertir le nom du hash en nom de fichier
+function hashToFilename(hashWithPrefix) {
+  // Chercher dans le mapping (avec le préfixe Hash)
+  const filename = hashMap[hashWithPrefix];
+  if (filename) {
+    // Remplacer les espaces par des underscores dans le nom de fichier
+    return filename.replace(/ /g, '_');
+  }
+  // Si pas trouvé, retourner le nom original sans Hash et avec underscores
+  return hashWithPrefix.replace(/^Hash/, '').replace(/ /g, '_');
 }
 
 // Fonction pour parser la ligne info_bot
@@ -40,12 +83,15 @@ function parseInfoBot(infoBotLine) {
   const parts = infoBotLine.split('|');
 
   if (parts.length >= 2) {
-    // Hash (avant le |) - enlever le préfixe "Hash" et convertir en snake_case
+    // Hash (avant le |) - utiliser le mapping pour convertir
     const hashPart = parts[0].trim();
     result.hash = hashPart
       .split(/\s+/)
       .filter(item => item && item.startsWith('Hash'))
-      .map(item => toSnakeCase(item.replace(/^Hash/, '')));
+      .map(item => {
+        // Utiliser le mapping avec le nom complet (avec Hash)
+        return hashToFilename(item);
+      });
 
     // Password (après le |) - garder les noms complets
     const passwordPart = parts[1].trim();
