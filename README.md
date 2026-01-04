@@ -4,13 +4,27 @@ Une application web moderne pour récupérer facilement les informations de seed
 
 ## 🚀 Démarrage rapide
 
-### Installation
+### Avec Docker (recommandé)
+
+```bash
+# Build the image
+docker build -t async-race-getter .
+
+# Run the container
+docker run -p 3000:3000 async-race-getter
+```
+
+L'application sera accessible sur [http://localhost:3000](http://localhost:3000)
+
+### Sans Docker
+
+#### Installation
 
 ```bash
 pnpm install
 ```
 
-### Lancement
+#### Lancement
 
 ```bash
 pnpm start
@@ -18,7 +32,7 @@ pnpm start
 
 L'application sera accessible sur [http://localhost:3000](http://localhost:3000)
 
-### Mode développement
+#### Mode développement
 
 ```bash
 pnpm dev
