@@ -103,10 +103,10 @@ function parseInfoBot(infoBotLine) {
   return result;
 }
 
-// Endpoint pour récupérer les données de racetime.gg
-fastify.get('/api/race/*', async (request, reply) => {
-  // Récupérer tout ce qui vient après /api/race/
-  const racePath = request.params['*'];
+// Endpoint pour récupérer les données de seed de racetime.gg
+fastify.get('/api/race/:category/:raceSlug/seed', async (request, reply) => {
+  const { category, raceSlug } = request.params;
+  const racePath = `${category}/${raceSlug}`;
 
   try {
     // Construire l'URL racetime.gg
@@ -142,6 +142,99 @@ fastify.get('/api/race/*', async (request, reply) => {
     });
   }
 });
+
+// Endpoint pour récupérer les entrants et leurs temps
+fastify.get('/api/race/:category/:raceSlug/entrants', async (request, reply) => {
+  const { category, raceSlug } = request.params;
+  const racePath = `${category}/${raceSlug}`;
+
+  try {
+    const url = `https://racetime.gg/${racePath}/data`;
+    fastify.log.info(`Fetching entrants data from: ${url}`);
+
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      return reply.status(response.status).send({
+        error: `Error fetching data: ${response.statusText}`
+      });
+    }
+
+    const data = await response.json();
+
+    // Parser les entrants
+    const entrants = data.entrants.map(entrant => {
+      console.log('Raw entrant:', JSON.stringify(entrant, null, 2));
+
+      const parsedEntrant = {
+        user: entrant.user.name,
+        status: entrant.status.value, // "done", "dnf", "in_progress", etc.
+        finishTime: null,
+        dnfTime: null
+      };
+
+      // Si le joueur a fini, parser son temps
+      if (entrant.finish_time) {
+        // finish_time est au format ISO 8601 duration (PT2H25M38S)
+        console.log('Parsing finish_time:', entrant.finish_time);
+        parsedEntrant.finishTime = parseDuration(entrant.finish_time);
+        console.log('Parsed to seconds:', parsedEntrant.finishTime);
+      }
+
+      // Pour les DNF, on utilise l'heure du dernier changement de statut
+      if (entrant.status.value === 'dnf' && entrant.actions && entrant.actions.length > 0) {
+        // Trouver l'action DNF la plus récente
+        const dnfAction = entrant.actions
+          .filter(action => action.action === 'done' && entrant.status.value === 'dnf')
+          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
+
+        if (dnfAction) {
+          // Calculer le temps écoulé depuis le début de la race
+          const raceStart = new Date(data.started_at);
+          const dnfTimestamp = new Date(dnfAction.timestamp);
+          parsedEntrant.dnfTime = Math.floor((dnfTimestamp - raceStart) / 1000); // en secondes
+        }
+      }
+
+      return parsedEntrant;
+    });
+
+    const result = {
+      raceName: data.goal.name,
+      status: data.status.value,
+      startedAt: data.started_at,
+      entrants: entrants.sort((a, b) => {
+        // Trier par temps de fin (les DNF à la fin)
+        if (a.finishTime && b.finishTime) return a.finishTime - b.finishTime;
+        if (a.finishTime) return -1;
+        if (b.finishTime) return 1;
+        return 0;
+      })
+    };
+
+    console.log('Parsed entrants:', JSON.stringify(result.entrants, null, 2));
+    return result;
+  } catch (error) {
+    fastify.log.error('Error fetching entrants data:', error);
+    return reply.status(500).send({
+      error: 'Error fetching data',
+      details: error.message
+    });
+  }
+});
+
+// Fonction pour parser une durée ISO 8601 (P0DT3H10M22.356246S) en secondes
+function parseDuration(duration) {
+  // Format: P[n]D[T[n]H[n]M[n[.n]]S]
+  const matches = duration.match(/P(?:\d+D)?T(?:(\d+)H)?(?:(\d+)M)?(?:([\d.]+)S)?/);
+  if (!matches) return 0;
+
+  const hours = parseInt(matches[1] || 0);
+  const minutes = parseInt(matches[2] || 0);
+  const seconds = parseFloat(matches[3] || 0);
+
+  return Math.floor(hours * 3600 + minutes * 60 + seconds);
+}
 
 // Démarrer le serveur
 const start = async () => {

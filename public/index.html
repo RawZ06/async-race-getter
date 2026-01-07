@@ -94,6 +94,16 @@
                             </button>
                         </div>
                     </div>
+                    <!-- Play Race Button -->
+                    <div class="mt-4 text-center">
+                        <button @click="playRace" class="bg-green-600 hover:bg-green-700 text-white font-bold px-8 py-3 rounded-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2 mx-auto">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Play Race
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Hash Section -->
@@ -184,7 +194,7 @@
 
                     try {
                         const raceId = this.extractRaceId(this.raceUrl);
-                        const response = await fetch(`/api/race${raceId}`);
+                        const response = await fetch(`/api/race${raceId}/seed`);
 
                         if (!response.ok) {
                             const errorData = await response.json();
@@ -193,6 +203,7 @@
 
                         // Data is already parsed by the backend
                         this.results = await response.json();
+                        this.results.racePath = raceId; // Store race path for simulator
                         console.log('Results from API:', this.results);
                     } catch (err) {
                         console.error('Error:', err);
@@ -200,6 +211,11 @@
                     } finally {
                         this.loading = false;
                     }
+                },
+
+                playRace() {
+                    const raceId = this.extractRaceId(this.raceUrl);
+                    window.location.href = `/simulator.html?race=${encodeURIComponent(raceId)}`;
                 }
             }
         }

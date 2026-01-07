@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Race Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+        .gradient-bg {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .timer-display {
+            font-family: 'Courier New', monospace;
+            font-size: 5rem;
+            line-height: 1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        @media (max-width: 768px) {
+            .timer-display {
+                font-size: 3rem;
+            }
+        }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen py-8 px-4">
+    <div class="max-w-6xl mx-auto" x-data="raceSimulator()">
+        <!-- Header -->
+        <div class="text-center mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-white mb-2">
+                🏁 Race Simulator
+            </h1>
+            <p class="text-purple-100 text-lg" x-text="raceName"></p>
+            <a href="/" class="inline-block mt-2 text-purple-200 hover:text-white underline">
+                ← Back to seed getter
+            </a>
+        </div>
+
+        <!-- Loading State -->
+        <div x-show="loading" class="text-center py-16">
+            <div class="inline-block w-16 h-16 border-4 border-purple-200 border-t-white rounded-full animate-spin"></div>
+            <p class="text-white mt-4 text-xl">Loading race data...</p>
+        </div>
+
+        <!-- Error State -->
+        <div x-show="error" class="bg-red-100 border-l-4 border-red-500 p-6 rounded-lg max-w-2xl mx-auto">
+            <p class="text-red-700 font-semibold" x-text="error"></p>
+            <a href="/" class="inline-block mt-4 text-red-600 hover:text-red-800 underline">
+                Go back
+            </a>
+        </div>
+
+        <!-- Race Content -->
+        <div x-show="!loading && !error" class="space-y-6">
+            <!-- Timer Card -->
+            <div class="bg-white rounded-2xl shadow-2xl p-8">
+                <div class="text-center">
+                    <div class="timer-display font-bold mb-6" x-text="formatTime(currentTime)"></div>
+
+                    <!-- Timer Controls -->
+                    <div class="flex gap-4 justify-center flex-wrap">
+                        <button
+                            @click="startTimer"
+                            :disabled="isRunning"
+                            :class="isRunning ? 'opacity-50 cursor-not-allowed' : 'hover:bg-green-700 transform hover:scale-105'"
+                            class="bg-green-600 text-white font-bold px-8 py-3 rounded-lg transition-all active:scale-95 flex items-center gap-2"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Start
+                        </button>
+
+                        <button
+                            @click="stopTimer"
+                            :disabled="!isRunning"
+                            :class="!isRunning ? 'opacity-50 cursor-not-allowed' : 'hover:bg-yellow-700 transform hover:scale-105'"
+                            class="bg-yellow-600 text-white font-bold px-8 py-3 rounded-lg transition-all active:scale-95 flex items-center gap-2"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 9v6m4-6v6m7-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Stop
+                        </button>
+
+                        <button
+                            @click="resetTimer"
+                            class="bg-red-600 hover:bg-red-700 text-white font-bold px-8 py-3 rounded-lg transition-all transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                            </svg>
+                            Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Entrants List -->
+            <div class="bg-white rounded-2xl shadow-2xl p-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                    <span class="mr-2">👥</span>
+                    Entrants
+                    <span class="ml-auto text-lg text-gray-500" x-text="`${entrants.length} entrants`"></span>
+                </h2>
+
+                <div class="space-y-2">
+                    <template x-for="(entrant, index) in entrants" :key="entrant.user">
+                        <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between border-2 transition-all"
+                             :class="{
+                                 'border-green-400 bg-green-50': isEntrantVisible(entrant) && entrant.status === 'done',
+                                 'border-red-400 bg-red-50': isEntrantVisible(entrant) && entrant.status === 'dnf',
+                                 'border-gray-200': !isEntrantVisible(entrant)
+                             }">
+                            <div class="flex items-center gap-4 flex-1">
+                                <div class="text-2xl font-bold text-gray-400 w-8 text-center" x-text="index + 1"></div>
+                                <div class="flex-1">
+                                    <div class="font-semibold text-lg" x-text="entrant.user"></div>
+                                    <div x-show="isEntrantVisible(entrant)" class="text-sm">
+                                        <span x-show="entrant.status === 'done'" class="text-green-600 font-medium">
+                                            ✓ Finished
+                                        </span>
+                                        <span x-show="entrant.status === 'dnf'" class="text-red-600 font-medium">
+                                            ✗ DNF
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div x-show="isEntrantVisible(entrant)"
+                                     class="font-mono text-xl font-bold"
+                                     :class="{
+                                         'text-green-600': entrant.status === 'done',
+                                         'text-red-600': entrant.status === 'dnf'
+                                     }"
+                                     x-text="formatTime(entrant.finishTime || entrant.dnfTime)">
+                                </div>
+                                <div x-show="!isEntrantVisible(entrant)" class="text-gray-400 text-lg">
+                                    --:--:--
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // SPEED_MULTIPLIER: 1 = real time, 1000 = 1000x faster (for testing)
+        const SPEED_MULTIPLIER = 1;
+
+        function raceSimulator() {
+            return {
+                loading: true,
+                error: '',
+                raceName: '',
+                entrants: [],
+                currentTime: 0,
+                isRunning: false,
+                timerInterval: null,
+                startTimestamp: null,
+                lastFinishTime: 0,
+
+                init() {
+                    // Get race ID from URL params
+                    const urlParams = new URLSearchParams(window.location.search);
+                    const raceId = urlParams.get('race');
+
+                    if (!raceId) {
+                        this.error = 'No race ID provided';
+                        this.loading = false;
+                        return;
+                    }
+
+                    this.fetchRaceData(raceId);
+                },
+
+                async fetchRaceData(raceId) {
+                    try {
+                        const response = await fetch(`/api/race${raceId}/entrants`);
+
+                        if (!response.ok) {
+                            const errorData = await response.json();
+                            throw new Error(errorData.error || 'Error fetching race data');
+                        }
+
+                        const data = await response.json();
+                        this.raceName = data.raceName;
+                        this.entrants = data.entrants;
+
+                        // Trouver le dernier temps de finish pour afficher les DNF après
+                        this.lastFinishTime = Math.max(
+                            ...this.entrants
+                                .filter(e => e.finishTime)
+                                .map(e => e.finishTime),
+                            0
+                        );
+
+                        console.log('Race data loaded:', data);
+                        console.log('Last finish time:', this.lastFinishTime);
+                    } catch (err) {
+                        console.error('Error:', err);
+                        this.error = err.message;
+                    } finally {
+                        this.loading = false;
+                    }
+                },
+
+                formatTime(seconds) {
+                    if (!seconds && seconds !== 0) return '00:00:00';
+
+                    const hours = Math.floor(seconds / 3600);
+                    const minutes = Math.floor((seconds % 3600) / 60);
+                    const secs = seconds % 60;
+
+                    return [hours, minutes, secs]
+                        .map(v => v < 10 ? '0' + v : v)
+                        .join(':');
+                },
+
+                isEntrantVisible(entrant) {
+                    // Show finish time when timer reaches it
+                    if (entrant.finishTime && this.currentTime >= entrant.finishTime) {
+                        return true;
+                    }
+                    // Show DNF when last finisher is shown
+                    if (entrant.status === 'dnf' && this.currentTime >= this.lastFinishTime) {
+                        return true;
+                    }
+                    return false;
+                },
+
+                startTimer() {
+                    if (this.isRunning) return;
+
+                    this.isRunning = true;
+                    this.startTimestamp = Date.now() - (this.currentTime * 1000 / SPEED_MULTIPLIER);
+
+                    const updateTimer = () => {
+                        if (!this.isRunning) return;
+
+                        const elapsed = Date.now() - this.startTimestamp;
+                        this.currentTime = Math.floor((elapsed * SPEED_MULTIPLIER) / 1000);
+
+                        requestAnimationFrame(updateTimer);
+                    };
+
+                    requestAnimationFrame(updateTimer);
+                },
+
+                stopTimer() {
+                    this.isRunning = false;
+                },
+
+                resetTimer() {
+                    this.stopTimer();
+                    this.currentTime = 0;
+                    this.startTimestamp = null;
+                }
+            }
+        }
+    </script>
+</body>
+</html>
