@@ -106,7 +106,7 @@
                 </h2>
 
                 <div class="space-y-2">
-                    <template x-for="(entrant, index) in entrants" :key="entrant.user">
+                    <template x-for="(entrant, index) in sortedEntrants" :key="entrant.user">
                         <div class="bg-gray-50 rounded-lg p-4 flex items-center justify-between border-2 transition-all"
                              :class="{
                                  'border-green-400 bg-green-50': isEntrantVisible(entrant) && entrant.status === 'done',
@@ -188,7 +188,9 @@
 
                         const data = await response.json();
                         this.raceName = data.raceName;
-                        this.entrants = data.entrants;
+
+                        // Shuffle entrants pour l'ordre initial aléatoire
+                        this.entrants = this.shuffleArray(data.entrants);
 
                         // Trouver le dernier temps de finish pour afficher les DNF après
                         this.lastFinishTime = Math.max(
@@ -206,6 +208,39 @@
                     } finally {
                         this.loading = false;
                     }
+                },
+
+                shuffleArray(array) {
+                    const shuffled = [...array];
+                    for (let i = shuffled.length - 1; i > 0; i--) {
+                        const j = Math.floor(Math.random() * (i + 1));
+                        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                    }
+                    return shuffled;
+                },
+
+                get sortedEntrants() {
+                    const done = [];
+                    const dnf = [];
+                    const unfinished = [];
+
+                    for (const entrant of this.entrants) {
+                        if (this.isEntrantVisible(entrant)) {
+                            if (entrant.status === 'done') {
+                                done.push(entrant);
+                            } else {
+                                dnf.push(entrant);
+                            }
+                        } else {
+                            unfinished.push(entrant);
+                        }
+                    }
+
+                    // Trier les done par temps de finish
+                    done.sort((a, b) => a.finishTime - b.finishTime);
+
+                    // Les DNF viennent après tous les finished
+                    return [...done, ...dnf, ...unfinished];
                 },
 
                 formatTime(seconds) {
