@@ -200,10 +200,9 @@
                             0
                         );
 
-                        console.log('Race data loaded:', data);
-                        console.log('Last finish time:', this.lastFinishTime);
+                        console.log(`✓ Race loaded: ${data.raceName} - ${this.entrants.length} entrants`);
                     } catch (err) {
-                        console.error('Error:', err);
+                        console.error('✗ Error loading race:', err.message);
                         this.error = err.message;
                     } finally {
                         this.loading = false;

@@ -7,7 +7,18 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 const fastify = Fastify({
-  logger: true
+  logger: {
+    level: 'info',
+    transport: {
+      target: 'pino-pretty',
+      options: {
+        translateTime: 'HH:MM:ss',
+        ignore: 'pid,hostname,reqId,responseTime,req,res',
+        singleLine: true,
+        colorize: true
+      }
+    }
+  }
 });
 
 // Static files
@@ -109,14 +120,11 @@ fastify.get('/api/race/:category/:raceSlug/seed', async (request, reply) => {
   const racePath = `${category}/${raceSlug}`;
 
   try {
-    // Construire l'URL racetime.gg
     const url = `https://racetime.gg/${racePath}/data`;
-
-    fastify.log.info(`Fetching data from: ${url}`);
-
     const response = await fetch(url);
 
     if (!response.ok) {
+      fastify.log.warn(`Seed fetch failed for ${racePath}: ${response.statusText}`);
       return reply.status(response.status).send({
         error: `Error fetching data: ${response.statusText}`
       });
@@ -124,18 +132,18 @@ fastify.get('/api/race/:category/:raceSlug/seed', async (request, reply) => {
 
     const data = await response.json();
 
-    // Vérifier que info_bot existe
     if (!data.info_bot) {
+      fastify.log.warn(`No info_bot data for ${racePath} (not managed by Mido's bot)`);
       return reply.status(400).send({
         error: 'This race was not managed by Mido\'s bot and data cannot be retrieved'
       });
     }
 
-    // Parser et retourner les données formatées
     const parsedData = parseInfoBot(data.info_bot);
+    fastify.log.info(`✓ Seed data retrieved for ${racePath}`);
     return parsedData;
   } catch (error) {
-    fastify.log.error('Error fetching race data:', error);
+    fastify.log.error(`✗ Error fetching seed for ${racePath}:`, error.message);
     return reply.status(500).send({
       error: 'Error fetching data',
       details: error.message
@@ -150,11 +158,10 @@ fastify.get('/api/race/:category/:raceSlug/entrants', async (request, reply) => 
 
   try {
     const url = `https://racetime.gg/${racePath}/data`;
-    fastify.log.info(`Fetching entrants data from: ${url}`);
-
     const response = await fetch(url);
 
     if (!response.ok) {
+      fastify.log.warn(`Entrants fetch failed for ${racePath}: ${response.statusText}`);
       return reply.status(response.status).send({
         error: `Error fetching data: ${response.statusText}`
       });
@@ -164,35 +171,28 @@ fastify.get('/api/race/:category/:raceSlug/entrants', async (request, reply) => 
 
     // Parser les entrants
     const entrants = data.entrants.map(entrant => {
-      console.log('Raw entrant:', JSON.stringify(entrant, null, 2));
-
       const parsedEntrant = {
         user: entrant.user.name,
-        status: entrant.status.value, // "done", "dnf", "in_progress", etc.
+        status: entrant.status.value,
         finishTime: null,
         dnfTime: null
       };
 
-      // Si le joueur a fini, parser son temps
+      // Parser le temps de finish (format ISO 8601: P0DT3H10M22.356246S)
       if (entrant.finish_time) {
-        // finish_time est au format ISO 8601 duration (PT2H25M38S)
-        console.log('Parsing finish_time:', entrant.finish_time);
         parsedEntrant.finishTime = parseDuration(entrant.finish_time);
-        console.log('Parsed to seconds:', parsedEntrant.finishTime);
       }
 
-      // Pour les DNF, on utilise l'heure du dernier changement de statut
+      // Pour les DNF, calculer le temps depuis le début (non utilisé actuellement)
       if (entrant.status.value === 'dnf' && entrant.actions && entrant.actions.length > 0) {
-        // Trouver l'action DNF la plus récente
         const dnfAction = entrant.actions
           .filter(action => action.action === 'done' && entrant.status.value === 'dnf')
           .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))[0];
 
         if (dnfAction) {
-          // Calculer le temps écoulé depuis le début de la race
           const raceStart = new Date(data.started_at);
           const dnfTimestamp = new Date(dnfAction.timestamp);
-          parsedEntrant.dnfTime = Math.floor((dnfTimestamp - raceStart) / 1000); // en secondes
+          parsedEntrant.dnfTime = Math.floor((dnfTimestamp - raceStart) / 1000);
         }
       }
 
@@ -204,7 +204,6 @@ fastify.get('/api/race/:category/:raceSlug/entrants', async (request, reply) => 
       status: data.status.value,
       startedAt: data.started_at,
       entrants: entrants.sort((a, b) => {
-        // Trier par temps de fin (les DNF à la fin)
         if (a.finishTime && b.finishTime) return a.finishTime - b.finishTime;
         if (a.finishTime) return -1;
         if (b.finishTime) return 1;
@@ -212,10 +211,13 @@ fastify.get('/api/race/:category/:raceSlug/entrants', async (request, reply) => 
       })
     };
 
-    console.log('Parsed entrants:', JSON.stringify(result.entrants, null, 2));
+    const doneCount = entrants.filter(e => e.status === 'done').length;
+    const dnfCount = entrants.filter(e => e.status === 'dnf').length;
+    fastify.log.info(`✓ Race simulator data for ${racePath}: ${entrants.length} entrants (${doneCount} finished, ${dnfCount} DNF)`);
+
     return result;
   } catch (error) {
-    fastify.log.error('Error fetching entrants data:', error);
+    fastify.log.error(`✗ Error fetching entrants for ${racePath}:`, error.message);
     return reply.status(500).send({
       error: 'Error fetching data',
       details: error.message

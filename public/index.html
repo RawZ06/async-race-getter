@@ -203,10 +203,10 @@
 
                         // Data is already parsed by the backend
                         this.results = await response.json();
-                        this.results.racePath = raceId; // Store race path for simulator
-                        console.log('Results from API:', this.results);
+                        this.results.racePath = raceId;
+                        console.log(`✓ Seed retrieved - Hash: ${this.results.hash.length} items, Password: ${this.results.password.length} items`);
                     } catch (err) {
-                        console.error('Error:', err);
+                        console.error('✗ Error fetching seed:', err.message);
                         this.error = err.message;
                     } finally {
                         this.loading = false;
