@@ -114,6 +114,68 @@ function parseInfoBot(infoBotLine) {
   return result;
 }
 
+// Endpoint pour récupérer les dernières races OOTR
+fastify.get('/api/races/recent', async (_request, reply) => {
+  try {
+    const url = 'https://racetime.gg/ootr/races/data';
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      fastify.log.warn(`Recent races fetch failed: ${response.statusText}`);
+      return reply.status(response.status).send({
+        error: `Error fetching recent races: ${response.statusText}`
+      });
+    }
+
+    const data = await response.json();
+
+    // Filtrer et extraire les 10 premières races (exclure les "not recordable")
+    const recentRaces = data.races
+      .filter(race => {
+        // Filtrer les races "not recordable"
+        if (race.info && race.info.toLowerCase().includes('not recordable')) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, 10)
+      .map(race => {
+        let description = null;
+
+        // Si info existe et contient au moins 2 \n (donc au moins 3 lignes)
+        if (race.info) {
+          // Compter le nombre de \n dans info
+          const newlineCount = (race.info.match(/\n/g) || []).length;
+
+          // Si au moins 2 \n, prendre la première ligne
+          if (newlineCount >= 2) {
+            const lines = race.info.split('\n');
+            description = lines[0].trim();
+          }
+          // Sinon, ne rien afficher (description reste null)
+        }
+
+        return {
+          name: race.name,
+          goal: race.goal ? race.goal.name : 'Unknown Goal',
+          description: description,
+          status: race.status.value,
+          startedAt: race.started_at || race.opened_at,
+          entrantsCount: race.entrants_count
+        };
+      });
+
+    fastify.log.info(`✓ Fetched ${recentRaces.length} recent races`);
+    return { races: recentRaces };
+  } catch (error) {
+    fastify.log.error('✗ Error fetching recent races:', error.message);
+    return reply.status(500).send({
+      error: 'Error fetching recent races',
+      details: error.message
+    });
+  }
+});
+
 // Endpoint pour récupérer les données de seed de racetime.gg
 fastify.get('/api/race/:category/:raceSlug/seed', async (request, reply) => {
   const { category, raceSlug } = request.params;
